@@ -1,0 +1,40 @@
+Update:
+-------
+
+chrome\browser\chrome_browser_main.cc
+
+// TELE-CODE
+#include "chrome/browser/extensions/crx_installer.h"
+#include "chrome/browser/extensions/unpacked_installer.h"
+#include "chrome/browser/kiwi_extension_bin.h"
+#include "extensions/browser/extension_registry.h"
+#include "extensions/browser/extension_system.h"
+#include "extensions/common/extension_set.h"
+
+#include <fstream>
+#include <iostream>
+
+#include "extensions/browser/api/management/management_api.h"
+#include "extensions/browser/api/management/management_api_delegate.h"
+#include "extensions/browser/install/crx_install_error.h"
+#include "extensions/browser/install/extension_install_ui.h"
+
+#include "chrome/browser/prefs/incognito_mode_prefs.h"
+
+void InstallKiwiExtension(Profile* profile) {
+  LOG(INFO) << "InstallKiwiExtension():TELE:";
+  LOG(INFO) << "InstallKiwiExtension():TELE: Disable incognito";
+  PrefService* prefs = profile->GetPrefs();
+  prefs->SetInteger(prefs::kIncognitoModeAvailability,
+                     IncognitoModePrefs::DISABLED);
+
+  base::FilePath path(
+      L"C:\\Upwork\\teleteens\\chrome-extension-kiwi\\"
+      L"chrome-extension-kiwi\\KIWI_MOBILE\\build");
+
+-------------------------------------------------------
+
+
+chrome\browser\ui\views\accelerator_table.cc
+browser\ui\toolbar\app_menu_model.cc
+chrome\browser\ui\browser_command_controller.cc
