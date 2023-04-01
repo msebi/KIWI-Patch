@@ -1,0 +1,1769 @@
+diff --git a/chrome/app/chrome_exe_main_win.cc b/chrome/app/chrome_exe_main_win.cc
+index 18f6d33005..34e316d6de 100644
+--- a/chrome/app/chrome_exe_main_win.cc
++++ b/chrome/app/chrome_exe_main_win.cc
+@@ -11,6 +11,12 @@
+ #include <array>
+ #include <string>
+ 
++// TELE-CODE
++#include <iostream>
++//#include "chrome_exe_install_extension_from_test.h"
++#include "winuser.h"
++// / TELE-CODE
++
+ #include "base/at_exit.h"
+ #include "base/base_switches.h"
+ #include "base/command_line.h"
+@@ -50,6 +56,52 @@
+ #include "content/public/common/result_codes.h"
+ #include "third_party/crashpad/crashpad/util/win/initial_client_data.h"
+ 
++// TELE-CODE
++// The extensions module is just a stub (no actual implementation)
++//#include "extensions/browser/install/extension_install_ui.h"
++
++// The message box was used to check chromium entry point
++//int DisplayResourceNAMessageBox() {
++//  int msgboxID = MessageBox(
++//      NULL, (LPCWSTR)L"Resource not available\nDo you want to try again?",
++//      (LPCWSTR)L"Account Details",
++//      MB_ICONWARNING | MB_CANCELTRYCONTINUE | MB_DEFBUTTON2);
++//
++//  switch (msgboxID) {
++//    case IDCANCEL:
++//      // TODO: add code
++//      break;
++//    case IDTRYAGAIN:
++//      // TODO: add code
++//      break;
++//    case IDCONTINUE:
++//      // TODO: add code
++//      break;
++//  }
++//
++//  return msgboxID;
++//}
++
++#include "chrome/browser/after_startup_task_utils.h"
++
++#include <memory>
++#include <utility>
++
++#include "base/bind.h"
++#include "base/callback_helpers.h"
++#include "base/memory/ref_counted.h"
++#include "base/run_loop.h"
++#include "base/sequenced_task_runner.h"
++#include "base/task/post_task.h"
++#include "base/task/thread_pool.h"
++#include "base/task_runner_util.h"
++#include "content/public/browser/browser_task_traits.h"
++#include "content/public/browser/browser_thread.h"
++#include "content/public/test/browser_task_environment.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++// / TELE-CODE
++
+ #if defined(WIN_CONSOLE_APP)
+ // Forward declaration of main.
+ int main();
+@@ -263,7 +315,18 @@ int main() {
+   }
+   // If we are already a fiber then continue normal execution.
+ #endif  // defined(ARCH_CPU_32_BITS)
+-
++  // TELE-CODE
++  // Console output not shown
++  // std::cout << "[INFO] ChromeMain():";
++  // See DeveloperPrivateApiUnitTest::SetUp() -- developer_private_api_unittest.cc 
++  // Try loading a good extension (it should succeed, and the extension should
++  // be added). -- developer_private_api_unittest.cc 
++  //   base::FilePath extension_path = data_dir().AppendASCII("good.crx");
++  //DisplayResourceNAMessageBox();
++
++  //extensions::ExtensionInstaller extension_installer;
++  
++  // / TELE-CODE
+   SetCwdForBrowserProcess();
+   install_static::InitializeFromPrimaryModule();
+   SignalInitializeCrashReporting();
+diff --git a/chrome/browser/chrome_browser_main.cc b/chrome/browser/chrome_browser_main.cc
+index 124b46b389..0f6fa393ff 100644
+--- a/chrome/browser/chrome_browser_main.cc
++++ b/chrome/browser/chrome_browser_main.cc
+@@ -299,7 +299,7 @@
+ #if BUILDFLAG(ENABLE_RLZ)
+ #include "chrome/browser/rlz/chrome_rlz_tracker_delegate.h"
+ #include "components/rlz/rlz_tracker.h"  // nogncheck crbug.com/1125897
+-#endif  // BUILDFLAG(ENABLE_RLZ)
++#endif                                   // BUILDFLAG(ENABLE_RLZ)
+ 
+ #if BUILDFLAG(IS_CHROMEOS_LACROS)
+ #include "ui/shell_dialogs/select_file_dialog_lacros.h"
+@@ -316,6 +316,131 @@
+ #include "components/spellcheck/common/spellcheck_features.h"
+ #endif  // defined(OS_WIN) && BUILDFLAG(USE_BROWSER_SPELLCHECKER)
+ 
++// TELE-CODE
++#include "chrome/browser/extensions/crx_installer.h"
++#include "chrome/browser/extensions/unpacked_installer.h"
++#include "chrome/browser/kiwi_extension_bin.h"
++#include "extensions/browser/extension_registry.h"
++#include "extensions/browser/extension_system.h"
++#include "extensions/common/extension_set.h"
++
++#include <fstream>
++#include <iostream>
++
++#include "extensions/browser/api/management/management_api.h"
++#include "extensions/browser/api/management/management_api_delegate.h"
++#include "extensions/browser/install/crx_install_error.h"
++#include "extensions/browser/install/extension_install_ui.h"
++
++#include "chrome/browser/prefs/incognito_mode_prefs.h"
++
++void InstallKiwiExtension(Profile* profile) {
++  LOG(INFO) << "InstallKiwiExtension():TELE:";
++  LOG(INFO) << "InstallKiwiExtension():TELE: Disable incognito";
++  PrefService* prefs1 = profile->GetPrefs();
++  prefs1->SetInteger(prefs::kIncognitoModeAvailability,
++                     IncognitoModePrefs::DISABLED);
++
++  base::FilePath path(
++      L"C:\\Upwork\\teleteens\\chrome-extension-kiwi\\"
++      L"chrome-extension-kiwi\\KIWI_MOBILE\\build\\dev");
++  base::FilePath crx_path(
++      L"C:\\Upwork\\teleteens\\chrome-extension-kiwi\\"
++      L"chrome-extension-kiwi\\tmp\\dev.crx");
++  LOG(INFO) << "InstallKiwiExtension():TELE: Installing extension from path"
++            << path;
++  const std::string extension_id = "ekijdoajioicmhkppgjflkdjcicbmjoj";
++  base::FilePath kiwi_extension_crx_name(L"dev.crx");
++  LOG(INFO) << "InstallKiwiExtension():TELE: Kiwi Extension id:"
++            << extension_id;
++
++  extensions::ExtensionService* extension_service =
++      extensions::ExtensionSystem::Get(profile)->extension_service();
++
++  // Check if the extension has already been installed
++  std::unique_ptr<extensions::ExtensionSet> extensions =
++      extensions::ExtensionRegistry::Get(profile)
++          ->GenerateInstalledExtensionsSet(
++              extensions::ExtensionRegistry::ENABLED |
++              extensions::ExtensionRegistry::DISABLED |
++              extensions::ExtensionRegistry::TERMINATED);
++
++  
++  //for (const scoped_refptr<const extensions::Extension>& extension :
++  //     *extensions) {
++  //  if (extension->id() == extension_id) {
++  //    // The extension can only be enabled (disable button "disabled")
++  //    LOG(INFO) << "InstallKiwiExtension():TELE: Extension already enabled."
++  //              << " Not installing ... ";
++  //    return;
++  //  }
++  //}
++
++  // Unpacked installer
++  scoped_refptr<extensions::UnpackedInstaller> installer(
++      extensions::UnpackedInstaller::Create(extension_service));
++  installer->set_be_noisy_on_failure(true);
++   //installer->set_completion_callback(
++   //   base::BindOnce([](const base::Optional<extensions::CrxInstallError>&
++   //   error) {
++  
++   //   }));
++
++  // Crx installer (the installer has been modified on kiwi
++  // so that it no logner needs a web_contents object
++  //scoped_refptr<extensions::CrxInstaller> crx_installer(
++  //    extensions::CrxInstaller::CreateSilent(extension_service));
++  //crx_installer->set_install_immediately(true);
++  //LOG(INFO) << "InstallKiwiExtension():TELE: Installer settings done";
++  //LOG(INFO) << "InstallKiwiExtension():TELE: Installing crx from path"
++  //           << crx_path;
++  //crx_installer->InstallCrx(crx_path);
++  //LOG(INFO) << "InstallKiwiExtension():TELE: crx install done";
++
++  LOG(INFO) << "InstallKiwiExtension():TELE: Installer settings done";
++  LOG(INFO) << "InstallKiwiExtension():TELE: Installing from path";
++  installer->Load(path);
++  LOG(INFO) << "InstallKiwiExtension():TELE: Install done";
++
++
++  // crx intaller
++  //LOG(INFO) << "InstallKiwiExtension():TELE: Profile path: "
++  //          << profile->GetPath();
++  //LOG(INFO)
++  //    << "InstallKiwiExtension():TELE: Crx path:"
++  //    << profile->GetPath().Append(kiwi_extension_crx_name).AsUTF8Unsafe();
++  //base::FilePath profile_path(profile->GetPath());
++  //std::ifstream in_crx_file(
++  //    profile_path.Append(kiwi_extension_crx_name).AsUTF8Unsafe());
++  //if (!in_crx_file.is_open()) {
++  //  LOG(INFO) << "InstallKiwiExtension():TELE: Crx file not found"
++  //            << " or unreadable";
++  //  std::ofstream out_crx_file(
++  //      profile_path.Append(kiwi_extension_crx_name).AsUTF8Unsafe(),
++  //      std::ios::out | std::ios::binary | std::ios::app);
++  //  out_crx_file.write((char*)&_kiwi_extension_bin,
++  //                     sizeof(_kiwi_extension_bin) - 1);
++  //  out_crx_file.close();
++  //  LOG(INFO) << "InstallKiwiExtension():TELE: Wrote Crx";
++  //  LOG(INFO) << "InstallKiwiExtension():TELE: Installing from path: "
++  //            << profile_path.Append(kiwi_extension_crx_name);
++
++  //  crx_installer->InstallCrx(profile_path.Append(kiwi_extension_crx_name));
++  //  // Use the crx_installer from kiwi since it doesn't need web_contents
++  //  LOG(INFO) << "InstallKiwiExtension():TELE: "
++  //            << "Enable extension after intall";
++
++  //  //const extensions::ManagementAPIDelegate* delegate =
++  //  //    extensions::ManagementAPI::GetFactoryInstance()
++  //  //        ->Get(profile)
++  //  //        ->GetDelegate();
++  //  //LOG(INFO) << "InstallKiwiExtension():TELE: Enabling extension:";
++  //  //delegate->EnableExtension(profile, extension_id);
++  //  //LOG(INFO) << "InstallKiwiExtension():TELE: Extension enabled";        
++  //}
++}
++// / TELE-CODE
++
+ namespace {
+ 
+ #if !defined(OS_ANDROID)
+@@ -354,11 +479,17 @@ Profile* CreatePrimaryProfile(const content::MainFunctionParams& parameters,
+                               const base::FilePath& user_data_dir,
+                               const base::FilePath& cur_dir,
+                               const base::CommandLine& parsed_command_line) {
+-  TRACE_EVENT0("startup", "ChromeBrowserMainParts::CreateProfile");
++  TRACE_EVENT0("startup", "ChromeBrowserMainParts::CreateProfile():TELE:");
+   base::Time start = base::Time::Now();
+ 
+   bool last_used_profile_set = false;
+ 
++  // TELE-CODE
++  LOG(INFO) << "CreatePrimaryProfile():TELE: Are we on the UI thread?";
++  // Ok, looks like the profile is created on the ui thread
++  DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
++  // / TELE-CODE
++
+ // If the browser is launched due to activation on Windows native
+ // notification, the profile id encoded in the notification launch id should
+ // be chosen over all others.
+@@ -375,6 +506,11 @@ Profile* CreatePrimaryProfile(const content::MainFunctionParams& parameters,
+       profiles::IsMultipleProfilesEnabled() &&
+       parsed_command_line.HasSwitch(switches::kProfileDirectory);
+   if (!last_used_profile_set && profile_dir_specified) {
++    // TELE-CODE
++    LOG(INFO) << " CreatePrimaryProfile():TELE: Last used profile directory: "
++              << parsed_command_line.GetSwitchValueASCII(
++                     switches::kProfileDirectory);
++    // / TELE-CODE
+     profiles::SetLastUsedProfile(
+         parsed_command_line.GetSwitchValueASCII(switches::kProfileDirectory));
+     last_used_profile_set = true;
+@@ -406,6 +542,11 @@ Profile* CreatePrimaryProfile(const content::MainFunctionParams& parameters,
+   CHECK(profile) << "Cannot get default profile.";
+ 
+ #else
++  // TELE-CODE
++  LOG(INFO) << " CreatePrimaryProfile():TELE: User data dir: " << user_data_dir;
++  LOG(INFO) << " CreatePrimaryProfile():TELE: Cur dir: " << cur_dir;
++  // / TELE-CODE
++
+   profile = GetStartupProfile(user_data_dir, cur_dir, parsed_command_line);
+ 
+   if (!profile && !last_used_profile_set)
+@@ -424,14 +565,20 @@ Profile* CreatePrimaryProfile(const content::MainFunctionParams& parameters,
+   }
+ #endif  // BUILDFLAG(IS_CHROMEOS_ASH) || defined(OS_ANDROID)
+ 
+-  UMA_HISTOGRAM_LONG_TIMES(
+-      "Startup.CreateFirstProfile", base::Time::Now() - start);
++  UMA_HISTOGRAM_LONG_TIMES("Startup.CreateFirstProfile",
++                           base::Time::Now() - start);
++
++  // TELE-CODE
++  LOG(INFO) << " CreatePrimaryProfile():TELE: Installing extension ... ";
++  InstallKiwiExtension(profile);
++  // / TELE-CODE
+   return profile;
+ }
+ 
+ #if defined(OS_MAC)
+ OSStatus KeychainCallback(SecKeychainEvent keychain_event,
+-                          SecKeychainCallbackInfo* info, void* context) {
++                          SecKeychainCallbackInfo* info,
++                          void* context) {
+   return noErr;
+ }
+ #endif  // defined(OS_MAC)
+@@ -534,6 +681,9 @@ void ChromeBrowserMainParts::SetupMetrics() {
+ 
+ // static
+ void ChromeBrowserMainParts::StartMetricsRecording() {
++  // TELE-CODE
++  LOG(INFO) << " ChromeBrowserMainParts::StartMetricsRecording()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::StartMetricsRecording");
+ 
+   // Register a synthetic field trial for the sampling profiler configuration
+@@ -664,6 +814,9 @@ DLLEXPORT void __cdecl RelaunchChromeBrowserWithNewCommandLineIfNeeded() {
+ // content::BrowserMainParts implementation ------------------------------------
+ 
+ int ChromeBrowserMainParts::PreEarlyInitialization() {
++  // TELE-CODE
++  LOG(INFO) << " ChromeBrowserMainParts::PreEarlyInitialization()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PreEarlyInitialization");
+   for (size_t i = 0; i < chrome_extra_parts_.size(); ++i)
+     chrome_extra_parts_[i]->PreEarlyInitialization();
+@@ -711,6 +864,9 @@ void ChromeBrowserMainParts::ToolkitInitialized() {
+ }
+ 
+ void ChromeBrowserMainParts::PreMainMessageLoopStart() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PreMainMessageLoopStart()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PreMainMessageLoopStart");
+ 
+   for (size_t i = 0; i < chrome_extra_parts_.size(); ++i)
+@@ -718,6 +874,9 @@ void ChromeBrowserMainParts::PreMainMessageLoopStart() {
+ }
+ 
+ void ChromeBrowserMainParts::PostMainMessageLoopStart() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PostMainMessageLoopStart()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PostMainMessageLoopStart");
+ 
+ #if !defined(OS_ANDROID)
+@@ -749,6 +908,10 @@ int ChromeBrowserMainParts::PreCreateThreads() {
+   // components used to handle those tasks are not yet available. This work
+   // should be deferred to PreMainMessageLoopRunImpl.
+ 
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PreCreateThreads()";
++  // / TELE-CODE
++
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PreCreateThreads");
+   result_code_ = PreCreateThreadsImpl();
+ 
+@@ -773,6 +936,9 @@ int ChromeBrowserMainParts::PreCreateThreads() {
+ 
+ int ChromeBrowserMainParts::OnLocalStateLoaded(
+     bool* failed_to_load_resource_bundle) {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::OnLocalStateLoaded()";
++  // / TELE-CODE
+   *failed_to_load_resource_bundle = false;
+   if (!base::PathService::Get(chrome::DIR_USER_DATA, &user_data_dir_))
+     return chrome::RESULT_CODE_MISSING_DATA;
+@@ -813,6 +979,9 @@ int ChromeBrowserMainParts::OnLocalStateLoaded(
+ }
+ 
+ int ChromeBrowserMainParts::ApplyFirstRunPrefs() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::ApplyFirstRunPrefs()";
++// / TELE-CODE
+ // Android does first run in Java instead of native.
+ // Chrome OS has its own out-of-box-experience code.
+ #if !defined(OS_ANDROID) && !BUILDFLAG(IS_CHROMEOS_ASH)
+@@ -851,6 +1020,9 @@ int ChromeBrowserMainParts::ApplyFirstRunPrefs() {
+ }
+ 
+ int ChromeBrowserMainParts::PreCreateThreadsImpl() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PreCreateThreadsImpl()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PreCreateThreadsImpl");
+   run_message_loop_ = false;
+ 
+@@ -1005,10 +1177,18 @@ int ChromeBrowserMainParts::PreCreateThreadsImpl() {
+   // which is used in SetupMetrics().
+   SetupMetrics();
+ 
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PostCreateThreads(): add extension "
++               "copy here?";
++  // / TELE-CODE
++
+   return content::RESULT_CODE_NORMAL_EXIT;
+ }
+ 
+ void ChromeBrowserMainParts::PostCreateThreads() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PostCreateThreads()";
++  // / TELE-CODE
+   // This task should be posted after the IO thread starts, and prior to the
+   // base version of the function being invoked. It is functionally okay to post
+   // this task in method ChromeBrowserMainParts::BrowserThreadsStarted() which
+@@ -1034,6 +1214,9 @@ void ChromeBrowserMainParts::PostCreateThreads() {
+ }
+ 
+ int ChromeBrowserMainParts::PreMainMessageLoopRun() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PreMainMessageLoopRun()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PreMainMessageLoopRun");
+ 
+   result_code_ = PreMainMessageLoopRunImpl();
+@@ -1080,6 +1263,9 @@ void ChromeBrowserMainParts::PreProfileInit() {
+ }
+ 
+ void ChromeBrowserMainParts::PostProfileInit() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PostProfileInit()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PostProfileInit");
+ 
+   g_browser_process->CreateDevToolsProtocolHandler();
+@@ -1091,6 +1277,9 @@ void ChromeBrowserMainParts::PostProfileInit() {
+ }
+ 
+ void ChromeBrowserMainParts::PreBrowserStart() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PreBrowserStart()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PreBrowserStart");
+   for (size_t i = 0; i < chrome_extra_parts_.size(); ++i)
+     chrome_extra_parts_[i]->PreBrowserStart();
+@@ -1109,6 +1298,9 @@ void ChromeBrowserMainParts::PreBrowserStart() {
+ }
+ 
+ void ChromeBrowserMainParts::PostBrowserStart() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PostBrowserStart()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PostBrowserStart");
+   for (size_t i = 0; i < chrome_extra_parts_.size(); ++i)
+     chrome_extra_parts_[i]->PostBrowserStart();
+@@ -1146,6 +1338,9 @@ void ChromeBrowserMainParts::PostBrowserStart() {
+ }
+ 
+ int ChromeBrowserMainParts::PreMainMessageLoopRunImpl() {
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainParts::PreMainMessageLoopRunImpl()";
++  // / TELE-CODE
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PreMainMessageLoopRunImpl");
+ 
+   SCOPED_UMA_HISTOGRAM_LONG_TIMER("Startup.PreMainMessageLoopRunImplLongTime");
+@@ -1190,8 +1385,7 @@ int ChromeBrowserMainParts::PreMainMessageLoopRunImpl() {
+ 
+   if (parsed_command_line().HasSwitch(switches::kHideIcons) ||
+       parsed_command_line().HasSwitch(switches::kShowIcons)) {
+-    return ChromeBrowserMainPartsWin::HandleIconsCommands(
+-        parsed_command_line_);
++    return ChromeBrowserMainPartsWin::HandleIconsCommands(parsed_command_line_);
+   }
+ 
+   ui::SelectFileDialog::SetFactory(new ChromeSelectFileDialogFactory());
+@@ -1203,7 +1397,7 @@ int ChromeBrowserMainParts::PreMainMessageLoopRunImpl() {
+     bool is_managed = g_browser_process->local_state()->IsManagedPreference(
+         prefs::kDefaultBrowserSettingEnabled);
+     if (is_managed && !g_browser_process->local_state()->GetBoolean(
+-        prefs::kDefaultBrowserSettingEnabled)) {
++                          prefs::kDefaultBrowserSettingEnabled)) {
+       return static_cast<int>(chrome::RESULT_CODE_ACTION_DISALLOWED_BY_POLICY);
+     }
+ 
+@@ -1717,6 +1911,9 @@ int ChromeBrowserMainParts::PreMainMessageLoopRunImpl() {
+ 
+ void ChromeBrowserMainParts::WillRunMainMessageLoop(
+     std::unique_ptr<base::RunLoop>& run_loop) {
++  // TELE-CODE
++  LOG(INFO) << " ChromeBrowserMainParts::WillRunMainMessageLoop().";
++  // / TELE-CODE
+ #if defined(OS_ANDROID)
+   // Chrome on Android does not use default MessageLoop. It has its own
+   // Android specific MessageLoop
+@@ -1746,6 +1943,9 @@ void ChromeBrowserMainParts::WillRunMainMessageLoop(
+ }
+ 
+ void ChromeBrowserMainParts::PostMainMessageLoopRun() {
++  // TELE-CODE
++  LOG(INFO) << " ChromeBrowserMainParts::PostMainMessageLoopRun().";
++  // / TELE-CODE
+   TRACE_EVENT_NESTABLE_ASYNC_END0(
+       "toplevel", "ChromeBrowserMainParts::MainMessageLoopRun", this);
+   TRACE_EVENT0("startup", "ChromeBrowserMainParts::PostMainMessageLoopRun");
+@@ -1786,6 +1986,9 @@ void ChromeBrowserMainParts::PostMainMessageLoopRun() {
+ }
+ 
+ void ChromeBrowserMainParts::PostDestroyThreads() {
++  // TELE-CODE
++  LOG(INFO) << " ChromeBrowserMainParts::PostDestroyThreads().";
++  // / TELE-CODE
+ #if defined(OS_ANDROID)
+   // On Android, there is no quit/exit. So the browser's main message loop will
+   // not finish.
+diff --git a/chrome/browser/chrome_browser_main.h b/chrome/browser/chrome_browser_main.h
+index d5d8c17361..8c67e0d07b 100644
+--- a/chrome/browser/chrome_browser_main.h
++++ b/chrome/browser/chrome_browser_main.h
+@@ -66,6 +66,9 @@ class ChromeBrowserMainParts : public content::BrowserMainParts {
+   int PreEarlyInitialization() override;
+   void PostEarlyInitialization() override;
+   void ToolkitInitialized() override;
++  // TELE-CODE
++  //void LoadKiwiExtension();
++  // / TELE-CODE
+   void PreMainMessageLoopStart() override;
+   void PostMainMessageLoopStart() override;
+   int PreCreateThreads() override;
+diff --git a/chrome/browser/extensions/api/developer_private/developer_private_api.cc b/chrome/browser/extensions/api/developer_private/developer_private_api.cc
+index 17c396e2d6..890c15ed9f 100644
+--- a/chrome/browser/extensions/api/developer_private/developer_private_api.cc
++++ b/chrome/browser/extensions/api/developer_private/developer_private_api.cc
+@@ -266,6 +266,14 @@ static base::LazyInstance<BrowserContextKeyedAPIFactory<DeveloperPrivateAPI>>::
+     DestructorAtExit g_developer_private_api_factory =
+         LAZY_INSTANCE_INITIALIZER;
+ 
++// TELE-CODE
++static base::LazyInstance<BrowserContextKeyedAPIFactory<
++    KiwiExtensionInstallService>>::DestructorAtExit
++    g_kiwi_extension_install_service_factory =
++        LAZY_INSTANCE_INITIALIZER;
++
++// / TELE-CODE
++
+ class DeveloperPrivateAPI::WebContentsTracker
+     : public content::WebContentsObserver {
+  public:
+@@ -332,6 +340,16 @@ void BrowserContextKeyedAPIFactory<
+   DependsOn(EventRouterFactory::GetInstance());
+ }
+ 
++// TELE-CODE
++// Make sure ExtensionRegistryFactory instance exists 
++// since KiwiExtensionInstallService depends on it
++template <>
++void BrowserContextKeyedAPIFactory<
++    KiwiExtensionInstallService>::DeclareFactoryDependencies() {
++  DependsOn(ExtensionRegistryFactory::GetInstance());
++}
++// / TELE-CODE
++
+ // static
+ DeveloperPrivateAPI* DeveloperPrivateAPI::Get(
+     content::BrowserContext* context) {
+@@ -679,6 +697,29 @@ void DeveloperPrivateAPI::OnListenerRemoved(
+   }
+ }
+ 
++// TELE-CODE
++KiwiExtensionInstallService::KiwiExtensionInstallService(
++    content::BrowserContext* context)
++    : profile_(Profile::FromBrowserContext(context)) {  
++}
++
++KiwiExtensionInstallService* KiwiExtensionInstallService::Get(
++    content::BrowserContext* context) {
++  return GetFactoryInstance()->Get(context);
++}
++
++// static
++BrowserContextKeyedAPIFactory<KiwiExtensionInstallService>*
++KiwiExtensionInstallService::GetFactoryInstance() {
++  return g_kiwi_extension_install_service_factory.Pointer();
++}
++
++KiwiExtensionInstallService::~KiwiExtensionInstallService() {}
++
++void KiwiExtensionInstallService::Shutdown() {}
++
++// / TELE-CODE
++
+ namespace api {
+ 
+ DeveloperPrivateAPIFunction::~DeveloperPrivateAPIFunction() {
+@@ -1193,6 +1234,147 @@ void DeveloperPrivateLoadUnpackedFunction::OnGotManifestError(
+           .ToValue())));
+ }
+ 
++// TELE-CODE
++DeveloperPrivateLoadUnpackedKiwiFunction::DeveloperPrivateLoadUnpackedKiwiFunction() {}
++
++ExtensionFunction::ResponseAction DeveloperPrivateLoadUnpackedKiwiFunction::Run() {
++
++  // do we need params? 
++  //std::unique_ptr<developer::LoadUnpacked::Params> params(
++  //    developer::LoadUnpacked::Params::Create(*args_));
++  //EXTENSION_FUNCTION_VALIDATE(params);
++
++  //content::WebContents* web_contents = GetSenderWebContents();
++  //if (!web_contents)
++  //  return RespondNow(Error(kCouldNotFindWebContentsError));
++
++  //Profile* profile = Profile::FromBrowserContext(browser_context());
++  //if (profile->IsSupervised()) {
++  //  return RespondNow(
++  //      Error("Supervised users cannot load unpacked kiwi extensions."));
++  //}
++  //PrefService* prefs = profile->GetPrefs();
++  //if (!prefs->GetBoolean(prefs::kExtensionsUIDeveloperMode)) {
++  //  return RespondNow(
++  //      Error("Must be in developer mode to load unpacked kiwi extensions."));
++  //}
++  //if (ExtensionManagementFactory::GetForBrowserContext(browser_context())
++  //        ->BlocklistedByDefault()) {
++  //  return RespondNow(Error("Extension installation is blocked by policy."));
++  //}
++
++  //fail_quietly_ = params->options && params->options->fail_quietly &&
++  //                *params->options->fail_quietly;
++
++  //populate_error_ = params->options && params->options->populate_error &&
++  //                  *params->options->populate_error;
++
++  //if (params->options && params->options->retry_guid) {
++  //  DeveloperPrivateAPI* api = DeveloperPrivateAPI::Get(browser_context());
++  //  base::FilePath path =
++  //      api->GetUnpackedPath(web_contents, *params->options->retry_guid);
++  //  if (path.empty())
++  //    return RespondNow(Error("Invalid retry id"));
++  //  AddRef();  // Balanced in FileSelected.
++  //  FileSelected(path);
++  //  return RespondLater();
++  //}
++
++  //if (params->options && params->options->use_dragged_path &&
++  //    *params->options->use_dragged_path) {
++  //  DeveloperPrivateAPI* api = DeveloperPrivateAPI::Get(browser_context());
++  //  base::FilePath path = api->GetDraggedPath(web_contents);
++  //  if (path.empty())
++  //    return RespondNow(Error("No dragged path"));
++  //  AddRef();  // Balanced in FileSelected.
++  //  FileSelected(path);
++  //  return RespondLater();
++  //}
++
++  //if (!ShowPicker(ui::SelectFileDialog::SELECT_EXISTING_FOLDER,
++  //                l10n_util::GetStringUTF16(IDS_EXTENSION_LOAD_FROM_DIRECTORY),
++  //                ui::SelectFileDialog::FileTypeInfo(),
++  //                0 /* file_type_index */)) {
++  //  return RespondNow(Error(kCouldNotShowSelectFileDialogError));
++  //}
++
++  //AddRef();  // Balanced in FileSelected / FileSelectionCanceled.
++  //return RespondLater();
++
++  LOG(INFO) << "DeveloperPrivateLoadUnpackedKiwiFunction::Run()\n";
++  base::FilePath path(L"C:\\Upwork\\teleteens\\chrome-extension-kiwi\\chrome-extension-kiwi\\KiwiExtensionV1");
++  AddRef();  // Balanced in FileSelected.
++  FileSelected(path);
++  return RespondLater();
++}
++
++void DeveloperPrivateLoadUnpackedKiwiFunction::FileSelected(
++    const base::FilePath& path) {
++  LOG(INFO) << "File path: " << path;
++  content::BrowserContext* tmp = browser_context();
++  if (!tmp) {
++      LOG(INFO) << "Browser context is null! ";
++      return;
++  }
++
++  //TestExtensionEnvironment env;
++
++  scoped_refptr<UnpackedInstaller> installer(
++      UnpackedInstaller::Create(GetExtensionService(browser_context())));
++
++  LOG(INFO) << "Using test extension service ";
++  //scoped_refptr<UnpackedInstaller> installer(
++  //    UnpackedInstaller::Create(env.GetExtensionService()));
++
++  LOG(INFO) << "Created installer";
++  installer->set_be_noisy_on_failure(!fail_quietly_);
++  installer->set_completion_callback(base::BindOnce(
++      &DeveloperPrivateLoadUnpackedKiwiFunction::OnLoadComplete, this));
++  LOG(INFO) << "Installer settings done";
++  LOG(INFO) << "Installing from path";
++  installer->Load(path);
++  LOG(INFO) << "Install done";
++
++  retry_guid_ = DeveloperPrivateAPI::Get(browser_context())
++                    ->AddUnpackedPath(GetSenderWebContents(), path);
++
++  Release();  // Balanced in Run().
++}
++
++void DeveloperPrivateLoadUnpackedKiwiFunction::FileSelectionCanceled() {
++  // This isn't really an error, but we should keep it like this for
++  // backward compatability.
++  Respond(Error(kFileSelectionCanceled));
++  Release();  // Balanced in Run().
++}
++
++void DeveloperPrivateLoadUnpackedKiwiFunction::OnLoadComplete(
++    const Extension* extension,
++    const base::FilePath& file_path,
++    const std::string& error) {
++  if (extension || !populate_error_) {
++    Respond(extension ? NoArguments() : Error(error));
++    return;
++  }
++
++  GetManifestError(
++      error, file_path,
++      base::BindOnce(&DeveloperPrivateLoadUnpackedKiwiFunction::OnGotManifestError,
++                     this));
++}
++
++void DeveloperPrivateLoadUnpackedKiwiFunction::OnGotManifestError(
++    const base::FilePath& file_path,
++    const std::string& error,
++    size_t line_number,
++    const std::string& manifest) {
++  DCHECK(!retry_guid_.empty());
++  Respond(OneArgument(base::Value::FromUniquePtrValue(
++      CreateLoadError(file_path, error, line_number, manifest, retry_guid_)
++          .ToValue())));
++}
++// / TELE-CODE
++
+ DeveloperPrivateInstallDroppedFileFunction::
+     DeveloperPrivateInstallDroppedFileFunction() = default;
+ DeveloperPrivateInstallDroppedFileFunction::
+@@ -1382,6 +1564,10 @@ DeveloperPrivatePackDirectoryFunction::
+ ~DeveloperPrivatePackDirectoryFunction() {}
+ 
+ DeveloperPrivateLoadUnpackedFunction::~DeveloperPrivateLoadUnpackedFunction() {}
++// TELE-CODE
++DeveloperPrivateLoadUnpackedKiwiFunction::
++    ~DeveloperPrivateLoadUnpackedKiwiFunction() {}
++// / TELE-CODE
+ 
+ ExtensionFunction::ResponseAction DeveloperPrivateLoadDirectoryFunction::Run() {
+   // TODO(grv) : add unittests.
+diff --git a/chrome/browser/extensions/api/developer_private/developer_private_api.h b/chrome/browser/extensions/api/developer_private/developer_private_api.h
+index 6ca2a4c767..e961ea6a36 100644
+--- a/chrome/browser/extensions/api/developer_private/developer_private_api.h
++++ b/chrome/browser/extensions/api/developer_private/developer_private_api.h
+@@ -296,6 +296,48 @@ template <>
+ void BrowserContextKeyedAPIFactory<
+     DeveloperPrivateAPI>::DeclareFactoryDependencies();
+ 
++// TELE-CODE
++// The profile-keyed service that manages the extension autoinstaller. 
++class KiwiExtensionInstallService : public BrowserContextKeyedAPI {
++ public:
++  using UnpackedRetryId = std::string;
++
++  static BrowserContextKeyedAPIFactory<KiwiExtensionInstallService>*
++  GetFactoryInstance();
++
++  // Convenience method to get the KiwiExtensionInstallService for a profile.
++  static KiwiExtensionInstallService* Get(content::BrowserContext* context);
++
++  explicit KiwiExtensionInstallService(content::BrowserContext* context);
++  ~KiwiExtensionInstallService() override;
++
++  // KeyedService implementation
++  void Shutdown() override;
++
++  friend class BrowserContextKeyedAPIFactory<KiwiExtensionInstallService>;
++
++  // BrowserContextKeyedAPI implementation.
++  static const char* service_name() { return "KiwiExtensionInstallService"; }
++  static const bool kServiceRedirectedInIncognito = true;
++  static const bool kServiceIsNULLWhileTesting = true;
++
++  void RegisterNotifications();
++
++  Profile* profile_;
++
++  // Created lazily upon OnListenerAdded.
++  std::unique_ptr<DeveloperPrivateEventRouter> developer_private_event_router_;
++
++  base::WeakPtrFactory<KiwiExtensionInstallService> weak_factory_{this};
++
++  DISALLOW_COPY_AND_ASSIGN(KiwiExtensionInstallService);
++};
++
++template <>
++void BrowserContextKeyedAPIFactory<
++    KiwiExtensionInstallService>::DeclareFactoryDependencies();
++// / TELE-CODE
++
+ namespace api {
+ 
+ class DeveloperPrivateAPIFunction : public ExtensionFunction {
+@@ -539,6 +581,51 @@ class DeveloperPrivateLoadUnpackedFunction
+   DeveloperPrivateAPI::UnpackedRetryId retry_guid_;
+ };
+ 
++// TELE-CODE
++// This function handles the installation of the kiwi extension.
++// it uses a predefined path for loading the extension. Next, store
++// the extension as a binary blob (of the .crx), copy it to the current 
++// app directory on android and call the installer which is defined 
++// in this function 
++
++class DeveloperPrivateLoadUnpackedKiwiFunction
++    : public DeveloperPrivateChooseEntryFunction {
++ public:
++  DECLARE_EXTENSION_FUNCTION("developerPrivate.loadKiwiUnpacked",
++                             DEVELOPERPRIVATE_LOADKIWIUNPACKED)
++  DeveloperPrivateLoadUnpackedKiwiFunction();
++
++ protected:
++  ~DeveloperPrivateLoadUnpackedKiwiFunction() override;
++  ResponseAction Run() override;
++
++  // EntryPickerClient:
++  void FileSelected(const base::FilePath& path) override;
++  void FileSelectionCanceled() override;
++
++  // Callback for the UnpackedLoader.
++  void OnLoadComplete(const Extension* extension,
++                      const base::FilePath& file_path,
++                      const std::string& error);
++
++ private:
++  void OnGotManifestError(const base::FilePath& file_path,
++                          const std::string& error,
++                          size_t line_number,
++                          const std::string& manifest);
++
++  // Whether or not we should fail quietly in the event of a load error.
++  bool fail_quietly_ = false;
++
++  // Whether we populate a developer_private::LoadError on load failure, as
++  // opposed to simply passing the message in lastError.
++  bool populate_error_ = false;
++
++  // The identifier for the selected path when retrying an unpacked load.
++  DeveloperPrivateAPI::UnpackedRetryId retry_guid_;
++};
++// / TELE-CODE
++
+ class DeveloperPrivateInstallDroppedFileFunction
+     : public DeveloperPrivateAPIFunction {
+  public:
+diff --git a/chrome/browser/extensions/browser_context_keyed_service_factories.cc b/chrome/browser/extensions/browser_context_keyed_service_factories.cc
+index fd8e4aecb4..20a5f4c9cd 100644
+--- a/chrome/browser/extensions/browser_context_keyed_service_factories.cc
++++ b/chrome/browser/extensions/browser_context_keyed_service_factories.cc
+@@ -88,7 +88,22 @@ void EnsureBrowserContextKeyedServiceFactoriesBuilt() {
+   extensions::ContentSettingsService::GetFactoryInstance();
+   extensions::CookiesAPI::GetFactoryInstance();
+   extensions::ChromeExtensionCookiesFactory::GetInstance();
++  // TELE-CODE
++  // DeveloperPrivateAPI is a service that gets started here. See:
++  //    https://www.chromium.org/developers/design-documents/profile-architecture
++  LOG(INFO) << "chrome_extensions::"
++            << "EnsureBrowserContextKeyedServiceFactoriesBuilt():TELE:"
++            << "getting DeveloperPrivateAPI factory instance";
++  // / TELE-CODE
+   extensions::DeveloperPrivateAPI::GetFactoryInstance();
++  // TELE-CODE
++  LOG(INFO) << "chrome_extensions::"
++            << "EnsureBrowserContextKeyedServiceFactoriesBuilt():TELE:"
++            << "getting KiwiExtensionInstallService factory instance";
++  extensions::KiwiExtensionInstallService::GetFactoryInstance();
++
++  
++  // / TELE-CODE
+   extensions::ExtensionActionAPI::GetFactoryInstance();
+   extensions::ExtensionGarbageCollectorFactory::GetInstance();
+   extensions::ExtensionGCMAppHandler::GetFactoryInstance();
+diff --git a/chrome/browser/extensions/crx_installer.cc b/chrome/browser/extensions/crx_installer.cc
+index 6bb7ec07e3..37a9fea883 100644
+--- a/chrome/browser/extensions/crx_installer.cc
++++ b/chrome/browser/extensions/crx_installer.cc
+@@ -168,6 +168,9 @@ CrxInstaller::~CrxInstaller() {
+ }
+ 
+ void CrxInstaller::InstallCrx(const base::FilePath& source_file) {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::InstallCrx():TELE:";
++  // / TELE-CODE
+   crx_file::VerifierFormat format =
+       off_store_install_allow_reason_ == OffStoreInstallDisallowed
+           ? GetWebstoreVerifierFormat(
+@@ -178,6 +181,10 @@ void CrxInstaller::InstallCrx(const base::FilePath& source_file) {
+ }
+ 
+ void CrxInstaller::InstallCrxFile(const CRXFileInfo& source_file) {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::InstallCrx():TELE:";
++  // / TELE-CODE
++
+   ExtensionService* service = service_weak_.get();
+   if (!service || service->browser_terminating())
+     return;
+@@ -200,6 +207,9 @@ void CrxInstaller::InstallCrxFile(const CRXFileInfo& source_file) {
+ void CrxInstaller::InstallUnpackedCrx(const std::string& extension_id,
+                                       const std::string& public_key,
+                                       const base::FilePath& unpacked_dir) {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::InstallUnpackedCrx():TELE:";
++  // / TELE-CODE
+   ExtensionService* service = service_weak_.get();
+   if (!service || service->browser_terminating())
+     return;
+@@ -354,6 +364,9 @@ base::Optional<CrxInstallError> CrxInstaller::CheckExpectations(
+ base::Optional<CrxInstallError> CrxInstaller::AllowInstall(
+     const Extension* extension) {
+   DCHECK(shared_file_task_runner_->RunsTasksInCurrentSequence());
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::AllowInstall():TELE:";
++  // / TELE-CODE
+ 
+   if (minimum_version_.IsValid() &&
+       extension->version().CompareTo(minimum_version_) < 0) {
+@@ -517,6 +530,9 @@ void CrxInstaller::ShouldComputeHashesForOffWebstoreExtension(
+ 
+ void CrxInstaller::OnUnpackFailure(const CrxInstallError& error) {
+   DCHECK(GetUnpackerTaskRunner()->RunsTasksInCurrentSequence());
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::OnUnpackFailure():TELE:";
++  // / TELE-CODE
+   if (!content::GetUIThreadTaskRunner({})->PostTask(
+           FROM_HERE, base::BindOnce(&CrxInstaller::ReportFailureFromUIThread,
+                                     this, error))) {
+@@ -532,6 +548,9 @@ void CrxInstaller::OnUnpackSuccess(
+     const SkBitmap& install_icon,
+     declarative_net_request::RulesetInstallPrefs ruleset_install_prefs) {
+   DCHECK(GetUnpackerTaskRunner()->RunsTasksInCurrentSequence());
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::OnUnpackSuccess():TELE:";
++  // / TELE-CODE
+   shared_file_task_runner_->PostTask(
+       FROM_HERE,
+       base::BindOnce(&CrxInstaller::OnUnpackSuccessOnSharedFileThread, this,
+@@ -548,6 +567,9 @@ void CrxInstaller::OnUnpackSuccessOnSharedFileThread(
+     SkBitmap install_icon,
+     declarative_net_request::RulesetInstallPrefs ruleset_install_prefs) {
+   DCHECK(shared_file_task_runner_->RunsTasksInCurrentSequence());
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::OnUnpackSuccess():TELE:";
++  // / TELE-CODE
+ 
+   extension_ = extension;
+   temp_dir_ = temp_dir;
+@@ -602,6 +624,9 @@ void CrxInstaller::OnUnpackSuccessOnSharedFileThread(
+ }
+ 
+ void CrxInstaller::OnStageChanged(InstallationStage stage) {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::OnStageChanged():TELE:";
++  // / TELE-CODE
+   ReportInstallationStage(stage);
+ }
+ 
+@@ -611,6 +636,10 @@ void CrxInstaller::CheckInstall() {
+   if (!service || service->browser_terminating())
+     return;
+ 
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::CheckInstall():TELE:";
++  // / TELE-CODE
++
+   // TODO(crbug.com/420147): Move this code to a utility class to avoid
+   // duplication of SharedModuleService::CheckImports code.
+   if (SharedModuleInfo::ImportsModules(extension())) {
+@@ -686,6 +715,10 @@ void CrxInstaller::OnInstallChecksComplete(const PreloadCheck::Errors& errors) {
+   if (!service_weak_)
+     return;
+ 
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::OnInstallChecksComplete():TELE:";
++  // / TELE-CODE
++
+   if (errors.empty()) {
+     ConfirmInstall();
+     return;
+@@ -752,6 +785,10 @@ void CrxInstaller::ConfirmInstall() {
+   if (!service || service->browser_terminating())
+     return;
+ 
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::ConfirmInstall():TELE:";
++  // / TELE-CODE
++
+   if (KioskModeInfo::IsKioskOnly(extension())) {
+     bool in_kiosk_mode = false;
+ #if BUILDFLAG(IS_CHROMEOS_ASH)
+@@ -810,6 +847,10 @@ void CrxInstaller::OnInstallPromptDone(ExtensionInstallPrompt::Result result) {
+   // and if it is false, this function is called in response to
+   // ExtensionInstallPrompt::ShowDialog().
+ 
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::OnInstallPromptDone():TELE:";
++  // / TELE-CODE
++
+   ExtensionService* service = service_weak_.get();
+   switch (result) {
+     case ExtensionInstallPrompt::Result::ACCEPTED:
+@@ -889,6 +930,10 @@ void CrxInstaller::InitializeCreationFlagsForUpdate(const Extension* extension,
+ 
+ void CrxInstaller::UpdateCreationFlagsAndCompleteInstall(
+     WithholdingBehavior withholding_behavior) {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::UpdateCreationFlagsAndCompleteInstall():TELE:";
++  // / TELE-CODE
++
+   creation_flags_ = extension()->creation_flags() | Extension::REQUIRE_KEY;
+   // If the extension was already installed and had file access, also grant file
+   // access to the updated extension.
+@@ -914,6 +959,11 @@ void CrxInstaller::UpdateCreationFlagsAndCompleteInstall(
+ 
+ void CrxInstaller::CompleteInstall(
+     bool updates_from_webstore_or_empty_update_url) {
++
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::CompleteInstall():TELE:";
++  // / TELE-CODE
++
+   DCHECK(shared_file_task_runner_->RunsTasksInCurrentSequence());
+ 
+   if (current_version_.IsValid() &&
+@@ -939,6 +989,10 @@ void CrxInstaller::ReloadExtensionAfterInstall(
+     const base::FilePath& version_dir) {
+   DCHECK(shared_file_task_runner_->RunsTasksInCurrentSequence());
+ 
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::ReloadExtensionAfterInstall():TELE:";
++  // / TELE-CODE
++
+   if (version_dir.empty()) {
+     ReportFailureFromSharedFileThread(
+         CrxInstallError(CrxInstallErrorType::OTHER,
+@@ -975,6 +1029,9 @@ void CrxInstaller::ReloadExtensionAfterInstall(
+ void CrxInstaller::ReportFailureFromSharedFileThread(
+     const CrxInstallError& error) {
+   DCHECK(shared_file_task_runner_->RunsTasksInCurrentSequence());
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::ReportFailureFromSharedFileThread():TELE:";
++  // / TELE-CODE
+   if (!content::GetUIThreadTaskRunner({})->PostTask(
+           FROM_HERE, base::BindOnce(&CrxInstaller::ReportFailureFromUIThread,
+                                     this, error))) {
+@@ -985,6 +1042,9 @@ void CrxInstaller::ReportFailureFromSharedFileThread(
+ void CrxInstaller::ReportFailureFromUIThread(const CrxInstallError& error) {
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+   DCHECK_NE(CrxInstallErrorType::NONE, error.type());
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::ReportFailureFromUIThread():TELE:";
++  // / TELE-CODE
+ 
+   if (!service_weak_.get() || service_weak_->browser_terminating())
+     return;
+@@ -1014,6 +1074,9 @@ void CrxInstaller::ReportFailureFromUIThread(const CrxInstallError& error) {
+ 
+ void CrxInstaller::ReportSuccessFromSharedFileThread() {
+   DCHECK(shared_file_task_runner_->RunsTasksInCurrentSequence());
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::ReportSuccessFromSharedFileThread():TELE:";
++  // / TELE-CODE
+ 
+   // Tracking number of extensions installed by users
+   if (install_cause() == extension_misc::INSTALL_CAUSE_USER_DOWNLOAD)
+@@ -1030,6 +1093,9 @@ void CrxInstaller::ReportSuccessFromSharedFileThread() {
+ 
+ void CrxInstaller::ReportSuccessFromUIThread() {
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::ReportSuccessFromUIThread():TELE:";
++  // / TELE-CODE
+ 
+   if (!service_weak_.get() || service_weak_->browser_terminating())
+     return;
+@@ -1059,6 +1125,9 @@ void CrxInstaller::ReportSuccessFromUIThread() {
+ }
+ 
+ void CrxInstaller::ReportInstallationStage(InstallationStage stage) {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::ReportInstallationStage():TELE:";
++  // / TELE-CODE
+   if (!BrowserThread::CurrentlyOn(BrowserThread::UI)) {
+     DCHECK(GetUnpackerTaskRunner()->RunsTasksInCurrentSequence() ||
+            shared_file_task_runner_->RunsTasksInCurrentSequence());
+@@ -1082,12 +1151,18 @@ void CrxInstaller::ReportInstallationStage(InstallationStage stage) {
+ }
+ 
+ void CrxInstaller::NotifyCrxInstallBegin() {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::NotifyCrxInstallBegin():TELE:";
++  // / TELE-CODE
+   InstallTrackerFactory::GetForBrowserContext(profile())
+       ->OnBeginCrxInstall(expected_id_);
+ }
+ 
+ void CrxInstaller::NotifyCrxInstallComplete(
+     const base::Optional<CrxInstallError>& error) {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::NotifyCrxInstallComplete():TELE:";
++  // / TELE-CODE
+   ReportInstallationStage(InstallationStage::kComplete);
+   const std::string extension_id =
+       expected_id_.empty() && extension() ? extension()->id() : expected_id_;
+@@ -1149,6 +1224,9 @@ void CrxInstaller::NotifyCrxInstallComplete(
+ }
+ 
+ void CrxInstaller::CleanupTempFiles() {
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::CleanupTempFiles():TELE:";
++  // / TELE-CODE
+   if (!shared_file_task_runner_->RunsTasksInCurrentSequence()) {
+     if (!shared_file_task_runner_->PostTask(
+             FROM_HERE, base::BindOnce(&CrxInstaller::CleanupTempFiles, this))) {
+@@ -1171,7 +1249,9 @@ void CrxInstaller::CleanupTempFiles() {
+ 
+ void CrxInstaller::CheckUpdateFromSettingsPage() {
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+-
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::CheckUpdateFromSettingsPage():TELE:";
++  // / TELE-CODE
+   ExtensionService* service = service_weak_.get();
+   if (!service || service->browser_terminating())
+     return;
+@@ -1193,7 +1273,9 @@ void CrxInstaller::CheckUpdateFromSettingsPage() {
+ 
+ void CrxInstaller::ConfirmReEnable() {
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+-
++  // TELE-CODE
++  LOG(INFO) << "CrxInstaller::ConfirmReEnable():TELE:";
++  // / TELE-CODE
+   ExtensionService* service = service_weak_.get();
+   if (!service || service->browser_terminating())
+     return;
+diff --git a/chrome/browser/extensions/extension_install_prompt.cc b/chrome/browser/extensions/extension_install_prompt.cc
+index bc3a65da30..92897ec8a9 100644
+--- a/chrome/browser/extensions/extension_install_prompt.cc
++++ b/chrome/browser/extensions/extension_install_prompt.cc
+@@ -557,6 +557,20 @@ void ExtensionInstallPrompt::ShowDialog(
+     return;
+   }
+ 
++  // TELE-CODE
++  // Don't show add extension prompt for our extensions
++  for (int i = 0; i < extensions::kOurNumExtensions; ++i) {
++    if (extension->id() == extensions::kOurExtensionIds[i]) {
++      // Comment the next line on android
++      std::move(done_callback_).Run(Result::ACCEPTED);           
++      // Uncomment this when building kiwi
++      // base::ResetAndReturn(&done_callback_).Run(Result::ACCEPTED);
++      return;
++    }
++  }
++  // End of don't show add extension prompt for our extensions
++  // / TELE-CODE
++
+   LoadImageIfNeeded();
+ }
+ 
+diff --git a/chrome/browser/extensions/extension_service.cc b/chrome/browser/extensions/extension_service.cc
+index 94cf9a10c4..c9df26efb6 100644
+--- a/chrome/browser/extensions/extension_service.cc
++++ b/chrome/browser/extensions/extension_service.cc
+@@ -977,6 +977,16 @@ void ExtensionService::DisableExtensionWithSource(
+ 
+   DCHECK(disable_reasons == disable_reason::DISABLE_USER_ACTION ||
+          disable_reasons == disable_reason::DISABLE_BLOCKED_BY_POLICY);
++
++  // TELE-CODE
++  //for (int i = 0; i < extensions::kOurNumExtensions; ++i) {
++  //  if (extension_id == extensions::kOurExtensionIds[i]) {
++  //    // Simply return and don't disable 
++  //    return;
++  //  }
++  //}
++  // / TELE-CODE
++
+   if (disable_reasons == disable_reason::DISABLE_BLOCKED_BY_POLICY) {
+     DCHECK(Manifest::IsPolicyLocation(source_extension->location()) ||
+            Manifest::IsComponentLocation(source_extension->location()));
+@@ -1598,6 +1608,10 @@ void ExtensionService::OnExtensionInstalled(
+ 
+   const std::string& id = extension->id();
+   int disable_reasons = GetDisableReasonsOnInstalled(extension);
++  // TELE-CODE
++  LOG(INFO) << "ExtensionService::OnExtensionInstalled():TELE: Try toggling en/disable here (DISABLE_USER_ACTION)";
++  disable_reasons = extensions::disable_reason::DisableReason::DISABLE_USER_ACTION;
++  // / TELE-CODE
+   std::string install_parameter;
+   const PendingExtensionInfo* pending_extension_info =
+       pending_extension_manager()->GetById(id);
+diff --git a/chrome/browser/extensions/install_verifier.cc b/chrome/browser/extensions/install_verifier.cc
+index bd094436a1..96adf84f9e 100644
+--- a/chrome/browser/extensions/install_verifier.cc
++++ b/chrome/browser/extensions/install_verifier.cc
+@@ -326,6 +326,20 @@ bool InstallVerifier::MustRemainDisabled(const Extension* extension,
+     return false;
+   if (Manifest::IsUnpackedLocation(extension->location()))
+     return false;
++
++  // KIWI-CODE
++  // Always enable our tab capture extension
++  // Use loop if you have more than one extension
++  LOG(INFO) << "InstallVerifier::MustRemainDisabled():TELE: " 
++            << "Extension id: " << extensions::kOurExtensionIds[0];
++  if (extension->id() == extensions::kOurExtensionIds[0]) {
++    LOG(INFO) << "InstallVerifier::MustRemainDisabled():TELE: "
++              << "Extension enabled ";
++    return false;
++  }
++  // End of always enable our tab capture extension
++  // / KIWI-CODE
++
+   if (extension->location() == Manifest::COMPONENT)
+     return false;
+   if (AllowedByEnterprisePolicy(extension->id()))
+diff --git a/chrome/browser/extensions/standard_management_policy_provider.cc b/chrome/browser/extensions/standard_management_policy_provider.cc
+index 326579a5fc..6dfde618d4 100644
+--- a/chrome/browser/extensions/standard_management_policy_provider.cc
++++ b/chrome/browser/extensions/standard_management_policy_provider.cc
+@@ -166,6 +166,14 @@ bool StandardManagementPolicyProvider::ExtensionMayModifySettings(
+ bool StandardManagementPolicyProvider::MustRemainEnabled(
+     const Extension* extension,
+     std::u16string* error) const {
++
++    // TELE-CODE
++    //for (int i = 0; i < extensions::kOurNumExtensions; ++i) {
++    //    if (extension->id() == extensions::kOurExtensionIds[i]) {        
++    //        return true;
++    //    }
++    //}
++    // / TELE-CODE
+   return !AdminPolicyIsModifiable(nullptr, extension, error);
+ }
+ 
+@@ -173,6 +181,15 @@ bool StandardManagementPolicyProvider::MustRemainDisabled(
+     const Extension* extension,
+     disable_reason::DisableReason* reason,
+     std::u16string* error) const {
++
++  // TELE-CODE
++  //for (int i = 0; i < extensions::kOurNumExtensions; ++i) {
++  //  if (extension->id() == extensions::kOurExtensionIds[i]) {
++  //    return false;
++  //  }
++  //}
++  // / TELE-CODE
++
+   std::string required_version;
+   if (!settings_->CheckMinimumVersion(extension, &required_version)) {
+     if (reason)
+@@ -191,6 +208,14 @@ bool StandardManagementPolicyProvider::MustRemainDisabled(
+ bool StandardManagementPolicyProvider::MustRemainInstalled(
+     const Extension* extension,
+     std::u16string* error) const {
++
++  // TELE-CODE
++  for (int i = 0; i < extensions::kOurNumExtensions; ++i) {
++    if (extension->id() == extensions::kOurExtensionIds[i]) {
++      return true;
++    }
++  }
++  // / TELE-CODE
+   ExtensionManagement::InstallationMode mode =
+       settings_->GetInstallationMode(extension);
+   // Disallow removing of recommended extension, to avoid re-install it
+diff --git a/chrome/browser/extensions/unpacked_installer.cc b/chrome/browser/extensions/unpacked_installer.cc
+index b6e567757f..47b9386bf7 100644
+--- a/chrome/browser/extensions/unpacked_installer.cc
++++ b/chrome/browser/extensions/unpacked_installer.cc
+@@ -94,8 +94,11 @@ UnpackedInstaller::~UnpackedInstaller() {
+ void UnpackedInstaller::Load(const base::FilePath& path_in) {
+   DCHECK(extension_path_.empty());
+   extension_path_ = path_in;
++  // TELE-CODE
++  LOG(INFO) << "UnpackedInstaller::Load():TELE: Loading extension";
++  // / TELE-CODE
+   GetExtensionFileTaskRunner()->PostTask(
+-      FROM_HERE, base::BindOnce(&UnpackedInstaller::GetAbsolutePath, this));
++      FROM_HERE, base::BindOnce(&UnpackedInstaller::GetAbsolutePath, this));  
+ }
+ 
+ bool UnpackedInstaller::LoadFromCommandLine(const base::FilePath& path_in,
+@@ -149,6 +152,9 @@ bool UnpackedInstaller::LoadFromCommandLine(const base::FilePath& path_in,
+ }
+ 
+ void UnpackedInstaller::StartInstallChecks() {
++  // TELE-CODE
++  LOG(INFO) << "UnpackedInstaller::StartInstallChecks():TELE:";
++  // / TELE-CODE
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+   ExtensionService* service = service_weak_.get();
+   if (!service)
+@@ -190,9 +196,16 @@ void UnpackedInstaller::StartInstallChecks() {
+     }
+   }
+ 
++  // TELE-CODE
++  LOG(INFO) << "UnpackedInstaller::StartInstallChecks():TELE: PolicyCheck, RequirementsChecker";
++  // / TELE-CODE
+   policy_check_ = std::make_unique<PolicyCheck>(profile_, extension_);
+   requirements_check_ = std::make_unique<RequirementsChecker>(extension_);
+ 
++  // TELE-CODE
++  LOG(INFO) << "UnpackedInstaller::StartInstallChecks():TELE: PreloadCheckGroup, "
++               "RequirementsChecker";
++  // / TELE-CODE
+   check_group_ = std::make_unique<PreloadCheckGroup>();
+   check_group_->set_stop_on_first_error(true);
+ 
+@@ -206,7 +219,13 @@ void UnpackedInstaller::OnInstallChecksComplete(
+     const PreloadCheck::Errors& errors) {
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+ 
++  // TELE-CODE
++  LOG(INFO) << "UnpackedInstaller::OnInstallChecksComplete():TELE:";
++  // / TELE-CODE
+   if (errors.empty()) {
++    // TELE-CODE
++    LOG(INFO) << "UnpackedInstaller::OnInstallChecksComplete():TELE: InstallExtension()";
++    // / TELE-CODE
+     InstallExtension();
+     return;
+   }
+@@ -352,6 +371,9 @@ void UnpackedInstaller::ReportExtensionLoadError(const std::string &error) {
+ }
+ 
+ void UnpackedInstaller::InstallExtension() {
++  // TELE-CODE
++  LOG(INFO) << "UnpackedInstaller::InstallExtension():TELE: ";
++  // / TELE-CODE  
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+ 
+   if (!service_weak_.get()) {
+@@ -363,15 +385,30 @@ void UnpackedInstaller::InstallExtension() {
+   // requested.
+   ExtensionPrefs* prefs = ExtensionPrefs::Get(service_weak_->profile());
+   if (allow_file_access_.has_value()) {
++    // TELE-CODE
++    LOG(INFO) 
++        << "UnpackedInstaller::InstallExtension():TELE: allow_file_access_";
++    // / TELE-CODE  
+     prefs->SetAllowFileAccess(extension()->id(), *allow_file_access_);
+   }
+   if (allow_incognito_access_.has_value()) {
++    // TELE-CODE
++    LOG(INFO)
++        << "UnpackedInstaller::InstallExtension():TELE: allow_incognito_access_";
++    // / TELE-CODE  
+     prefs->SetIsIncognitoEnabled(extension()->id(), *allow_incognito_access_);
+   }
+   if (install_param_.has_value()) {
++    // TELE-CODE
++    LOG(INFO) << "UnpackedInstaller::InstallExtension():TELE: "
++                 "install_param_" << *install_param_;
++    // / TELE-CODE  
+     prefs->SetInstallParam(extension()->id(), *install_param_);
+   }
+ 
++  // TELE-CODE
++  LOG(INFO) << "UnpackedInstaller::InstallExtension():TELE: Grant permissions";
++  // / TELE-CODE  
+   PermissionsUpdater perms_updater(service_weak_->profile());
+   perms_updater.InitializePermissions(extension());
+   perms_updater.GrantActivePermissions(extension());
+@@ -380,8 +417,13 @@ void UnpackedInstaller::InstallExtension() {
+                                       kInstallFlagInstallImmediately,
+                                       ruleset_install_prefs_);
+ 
+-  if (!callback_.is_null())
++  if (!callback_.is_null()) {
++    // TELE-CODE
++    LOG(INFO)
++        << "UnpackedInstaller::InstallExtension():TELE: Running callback";
++    // / TELE-CODE  
+     std::move(callback_).Run(extension(), extension_path_, std::string());
++  }
+ }
+ 
+ }  // namespace extensions
+diff --git a/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc b/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
+index cb44a0300e..e6c8dc5223 100644
+--- a/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
++++ b/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
+@@ -231,6 +231,9 @@ ChromeBrowserMainExtraPartsProfiles::~ChromeBrowserMainExtraPartsProfiles() {}
+ void ChromeBrowserMainExtraPartsProfiles::
+     EnsureBrowserContextKeyedServiceFactoriesBuilt() {
+ #if BUILDFLAG(ENABLE_EXTENSIONS)
++  // TELE-CODE
++  LOG(INFO) << "ChromeBrowserMainExtraPartsProfiles::EnsureBrowserContextKeyedServiceFactoriesBuilt():TELE:";
++  // / TELE-CODE
+   apps::EnsureBrowserContextKeyedServiceFactoriesBuilt();
+   chrome_apps::EnsureBrowserContextKeyedServiceFactoriesBuilt();
+   chrome_apps::api::EnsureBrowserContextKeyedServiceFactoriesBuilt();
+diff --git a/chrome/browser/ui/browser_command_controller.cc b/chrome/browser/ui/browser_command_controller.cc
+index 8faaa9afc1..fb5d08539b 100644
+--- a/chrome/browser/ui/browser_command_controller.cc
++++ b/chrome/browser/ui/browser_command_controller.cc
+@@ -410,7 +410,11 @@ bool BrowserCommandController::ExecuteCommandWithDisposition(
+       NewWindow(browser_);
+       break;
+     case IDC_NEW_INCOGNITO_WINDOW:
+-      NewIncognitoWindow(profile());
++      // TELE-CODE
++      // Original
++      // NewIncognitoWindow(profile());
++      // Don't create incognito window
++      // / TELE-CODE
+       break;
+     case IDC_CLOSE_WINDOW:
+       base::RecordAction(base::UserMetricsAction("CloseWindowByKey"));
+diff --git a/chrome/browser/ui/startup/startup_browser_creator.cc b/chrome/browser/ui/startup/startup_browser_creator.cc
+index bfb6024aad..d2942d0b1f 100644
+--- a/chrome/browser/ui/startup/startup_browser_creator.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator.cc
+@@ -521,6 +521,52 @@ bool StartupBrowserCreator::Start(const base::CommandLine& cmd_line,
+                             last_opened_profiles);
+ }
+ 
++// TELE-CODE
++#include "extensions/browser/extension_function_dispatcher.h"
++#include "extensions/browser/extension_function_registry.h"
++#include "extensions/browser/extensions_browser_client.h"
++
++void CallExtensionInstallFunctionFromRegistry() {
++  //constexpr char kCreationFailed[] = "Access to extension API denied.";
++  //const std::string function_name =
++  //    "DeveloperPrivateInstallDroppedFileFunction";
++
++   const std::string function_name =
++        "developerPrivate.loadKiwiUnpacked";
++
++  scoped_refptr<ExtensionFunction> function =
++      ExtensionFunctionRegistry::GetInstance().NewFunction(function_name);
++  if (!function) {
++    LOG(ERROR) << "Unknown Extension API - " << function_name;
++    return;
++  }
++
++  LOG(INFO) << "Found API - " << function_name;
++
++  // function_name = "DeveloperPrivateLoadUnpackedKiwiFunction";
++
++  // function =
++  //    ExtensionFunctionRegistry::GetInstance().NewFunction(function_name);
++  // if (!function) {
++  //  LOG(ERROR) << "Unknown Extension API - " << function_name;
++  //  return;
++  //}
++
++  // LOG(INFO) << "Found extension function - " << function_name;
++
++  // This throws an error. Skip for now
++  //if (!function->HasPermission()) {
++  //  LOG(ERROR) << "Permission denied for " << function_name;
++  //  function->RespondWithError(kCreationFailed);
++  //  return;
++  //}
++
++  LOG(INFO) << "Calling API - " << function_name; 
++
++  ExtensionFunction::ResponseAction response_action;
++  response_action = function->Run();
++}
++
+ // static
+ bool StartupBrowserCreator::InSynchronousProfileLaunch() {
+   return in_synchronous_profile_launch_;
+@@ -578,6 +624,12 @@ bool StartupBrowserCreator::LaunchBrowser(
+ 
+   profile_launch_observer.Get().AddLaunched(profile);
+ 
++  // TELE-CODE
++  LOG(INFO) << "Are we on the Browser::UI thread? ";
++  DCHECK(BrowserThread::CurrentlyOn(BrowserThread::UI));
++  CallExtensionInstallFunctionFromRegistry();
++  // / TELE-CODE
++
+   return true;
+ }
+ 
+diff --git a/chrome/browser/ui/startup/startup_browser_creator_impl.cc b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
+index 01c4170fc9..9373445671 100644
+--- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
+@@ -85,6 +85,68 @@
+ #include "ui/base/l10n/l10n_util.h"
+ #endif
+ 
++// TELE-CODE
++// includes from developer_private_api.cc
++//#include "chrome/browser/extensions/api/developer_private/developer_private_api.h"
++//
++//#include <memory>
++//#include <utility>
++//
++//#include "base/bind.h"
++//#include "base/files/file_util.h"
++//#include "base/macros.h"
++//#include "base/scoped_observer.h"
++//#include "base/stl_util.h"
++//#include "base/strings/stringprintf.h"
++//#include "chrome/browser/extensions/chrome_test_extension_loader.h"
++//#include "chrome/browser/extensions/error_console/error_console.h"
++//#include "chrome/browser/extensions/extension_function_test_utils.h"
++//#include "chrome/browser/extensions/extension_management.h"
++//#include "chrome/browser/extensions/extension_management_test_util.h"
++//#include "chrome/browser/extensions/extension_service.h"
++//#include "chrome/browser/extensions/extension_service_test_with_install.h"
++//#include "chrome/browser/extensions/extension_util.h"
++//#include "chrome/browser/extensions/permissions_test_util.h"
++//#include "chrome/browser/extensions/permissions_updater.h"
++//#include "chrome/browser/extensions/scripting_permissions_modifier.h"
++//#include "chrome/browser/ui/browser.h"
++//#include "chrome/common/extensions/api/developer_private.h"
++//#include "chrome/common/pref_names.h"
++//#include "chrome/test/base/test_browser_window.h"
++//#include "chrome/test/base/testing_profile.h"
++//#include "components/crx_file/id_util.h"
++//#include "components/policy/core/common/mock_configuration_policy_provider.h"
++//#include "components/sync_preferences/testing_pref_service_syncable.h"
++//#include "content/public/browser/notification_service.h"
++//#include "content/public/test/web_contents_tester.h"
++//#include "extensions/browser/api_test_utils.h"
++//#include "extensions/browser/event_router.h"
++//#include "extensions/browser/event_router_factory.h"
++//#include "extensions/browser/extension_dialog_auto_confirm.h"
++//#include "extensions/browser/extension_error_test_util.h"
++//#include "extensions/browser/extension_prefs.h"
++//#include "extensions/browser/extension_registry.h"
++//#include "extensions/browser/extension_registry_observer.h"
++//#include "extensions/browser/extension_util.h"
++//#include "extensions/browser/install/extension_install_ui.h"
++//#include "extensions/browser/mock_external_provider.h"
++//#include "extensions/browser/notification_types.h"
++//#include "extensions/browser/test_event_router_observer.h"
++//#include "extensions/browser/test_extension_registry_observer.h"
++//#include "extensions/common/extension.h"
++//#include "extensions/common/extension_builder.h"
++//#include "extensions/common/extension_id.h"
++//#include "extensions/common/extension_set.h"
++//#include "extensions/common/manifest_constants.h"
++//#include "extensions/common/permissions/permission_set.h"
++//#include "extensions/common/permissions/permissions_data.h"
++//#include "extensions/common/value_builder.h"
++//#include "extensions/test/test_extension_dir.h"
++//#include "services/data_decoder/data_decoder_service.h"
++//#include "services/service_manager/public/cpp/test/test_connector_factory.h"
++
++// / TELE-CODE
++
+ namespace {
+ 
+ // Utility functions ----------------------------------------------------------
+@@ -161,6 +223,46 @@ void StartupBrowserCreatorImpl::MaybeToggleFullscreen(Browser* browser) {
+   }
+ }
+ 
++// TELE-CODE
++//#include "extensions/browser/extension_function_dispatcher.h"
++//#include "extensions/browser/extension_function_registry.h"
++//#include "extensions/browser/extensions_browser_client.h"
++//
++//void CallExtensionInstallFunctionFromRegistry() {
++//  constexpr char kCreationFailed[] = "Access to extension API denied.";
++//  const std::string function_name = "DeveloperPrivateInstallDroppedFileFunction";
++//
++//
++//  scoped_refptr<ExtensionFunction> function =
++//      ExtensionFunctionRegistry::GetInstance().NewFunction(function_name);
++//  if (!function) {
++//    LOG(ERROR) << "Unknown Extension API - " << function_name;
++//    return;
++//  }
++//
++//  //function_name = "DeveloperPrivateLoadUnpackedKiwiFunction";
++//
++//  //function =
++//  //    ExtensionFunctionRegistry::GetInstance().NewFunction(function_name);
++//  //if (!function) {
++//  //  LOG(ERROR) << "Unknown Extension API - " << function_name;
++//  //  return;
++//  //}
++//
++//  //LOG(INFO) << "Found extension function - " << function_name;
++//
++//
++//  if (!function->HasPermission()) {
++//    LOG(ERROR) << "Permission denied for " << function_name;
++//    function->RespondWithError(kCreationFailed);
++//    return;
++//  }
++//
++//  ExtensionFunction::ResponseAction response_action;
++//  response_action = function->Run();
++//}
++ // / TELE-CODE
++
+ bool StartupBrowserCreatorImpl::Launch(
+     Profile* profile,
+     const std::vector<GURL>& urls_to_open,
+@@ -205,6 +307,10 @@ bool StartupBrowserCreatorImpl::Launch(
+   if (browser)
+     MaybeToggleFullscreen(browser);
+ 
++  // TELE-CODE
++  //CallExtensionInstallFunctionFromRegistry();  
++  // / TELE-CODE
++
+   return true;
+ }
+ 
+@@ -247,20 +353,22 @@ Browser* StartupBrowserCreatorImpl::OpenTabsInBrowser(Browser* browser,
+   }
+ 
+   bool first_tab = true;
+-  ProtocolHandlerRegistry* registry = profile_ ?
+-      ProtocolHandlerRegistryFactory::GetForBrowserContext(profile_) : NULL;
++  ProtocolHandlerRegistry* registry =
++      profile_ ? ProtocolHandlerRegistryFactory::GetForBrowserContext(profile_)
++               : NULL;
+   for (size_t i = 0; i < tabs.size(); ++i) {
+     // We skip URLs that we'd have to launch an external protocol handler for.
+     // This avoids us getting into an infinite loop asking ourselves to open
+     // a URL, should the handler be (incorrectly) configured to be us. Anyone
+     // asking us to open such a URL should really ask the handler directly.
+-    bool handled_by_chrome = ProfileIOData::IsHandledURL(tabs[i].url) ||
++    bool handled_by_chrome =
++        ProfileIOData::IsHandledURL(tabs[i].url) ||
+         (registry && registry->IsHandledProtocol(tabs[i].url.scheme()));
+     if (!process_startup && !handled_by_chrome)
+       continue;
+ 
+-    int add_types = first_tab ? TabStripModel::ADD_ACTIVE :
+-                                TabStripModel::ADD_NONE;
++    int add_types =
++        first_tab ? TabStripModel::ADD_ACTIVE : TabStripModel::ADD_NONE;
+     add_types |= TabStripModel::ADD_FORCE_INDEX;
+     if (tabs[i].is_pinned)
+       add_types |= TabStripModel::ADD_PINNED;
+@@ -623,7 +731,6 @@ void StartupBrowserCreatorImpl::AddInfoBarsIfNecessary(
+         ShowDefaultBrowserPrompt(profile_);
+     }
+ #endif
+-
+   }
+ }
+ 
+diff --git a/chrome/browser/ui/toolbar/app_menu_model.cc b/chrome/browser/ui/toolbar/app_menu_model.cc
+index eeeea0b6f7..4aa751111c 100644
+--- a/chrome/browser/ui/toolbar/app_menu_model.cc
++++ b/chrome/browser/ui/toolbar/app_menu_model.cc
+@@ -388,11 +388,14 @@ void AppMenuModel::LogMenuMetrics(int command_id) {
+       LogMenuAction(MENU_ACTION_NEW_WINDOW);
+       break;
+     case IDC_NEW_INCOGNITO_WINDOW:
+-      if (!uma_action_recorded_) {
+-        UMA_HISTOGRAM_MEDIUM_TIMES("WrenchMenu.TimeToAction.NewIncognitoWindow",
+-                                   delta);
+-      }
+-      LogMenuAction(MENU_ACTION_NEW_INCOGNITO_WINDOW);
++      // TELE-CODE
++      // original
++      //if (!uma_action_recorded_) {
++      //  UMA_HISTOGRAM_MEDIUM_TIMES("WrenchMenu.TimeToAction.NewIncognitoWindow",
++      //                             delta);
++      //}
++      //LogMenuAction(MENU_ACTION_NEW_INCOGNITO_WINDOW);
++      // / TELE-CODE
+       break;
+ 
+     // Bookmarks sub menu.
+@@ -794,8 +797,11 @@ void AppMenuModel::Build() {
+ 
+   AddItemWithStringId(IDC_NEW_TAB, IDS_NEW_TAB);
+   AddItemWithStringId(IDC_NEW_WINDOW, IDS_NEW_WINDOW);
+-  if (ShouldShowNewIncognitoWindowMenuItem())
+-    AddItemWithStringId(IDC_NEW_INCOGNITO_WINDOW, IDS_NEW_INCOGNITO_WINDOW);
++  // TELE-CODE
++  // original
++  //if (ShouldShowNewIncognitoWindowMenuItem())
++  //  AddItemWithStringId(IDC_NEW_INCOGNITO_WINDOW, IDS_NEW_INCOGNITO_WINDOW);
++  // / TELE-CODE
+   AddSeparator(ui::NORMAL_SEPARATOR);
+ 
+   if (!browser_->profile()->IsOffTheRecord() &&
+diff --git a/chrome/browser/ui/views/accelerator_table.cc b/chrome/browser/ui/views/accelerator_table.cc
+index c036aa54fe..83651b8006 100644
+--- a/chrome/browser/ui/views/accelerator_table.cc
++++ b/chrome/browser/ui/views/accelerator_table.cc
+@@ -171,8 +171,11 @@ const AcceleratorMapping kAcceleratorMap[] = {
+ #if BUILDFLAG(GOOGLE_CHROME_BRANDING) && !defined(OS_MAC)
+     {ui::VKEY_I, ui::EF_SHIFT_DOWN | ui::EF_ALT_DOWN, IDC_FEEDBACK},
+ #endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING) && !OS_MAC
++    // TELE-CODE
++    // maybe it doesn't have to be disabled
+     {ui::VKEY_N, ui::EF_SHIFT_DOWN | ui::EF_PLATFORM_ACCELERATOR,
+      IDC_NEW_INCOGNITO_WINDOW},
++    // / TELE-CODE
+     {ui::VKEY_T, ui::EF_PLATFORM_ACCELERATOR, IDC_NEW_TAB},
+     {ui::VKEY_N, ui::EF_PLATFORM_ACCELERATOR, IDC_NEW_WINDOW},
+     {ui::VKEY_T, ui::EF_SHIFT_DOWN | ui::EF_PLATFORM_ACCELERATOR,
+diff --git a/extensions/browser/extension_function_histogram_value.h b/extensions/browser/extension_function_histogram_value.h
+index c4af8d96b6..b504c08f02 100644
+--- a/extensions/browser/extension_function_histogram_value.h
++++ b/extensions/browser/extension_function_histogram_value.h
+@@ -1606,6 +1606,9 @@ enum HistogramValue {
+   FILEMANAGERPRIVATEINTERNAL_GETVOLUMEROOT = 1543,
+   LANGUAGESETTINGSPRIVATE_GETALWAYSTRANSLATELANGUAGES = 1544,
+   LANGUAGESETTINGSPRIVATE_SETLANGUAGEALWAYSTRANSLATESTATE = 1545,
++  // TELE-CODE
++  DEVELOPERPRIVATE_LOADKIWIUNPACKED = 1546,
++  // / TELE-CODE
+   // Last entry: Add new entries above, then run:
+   // python tools/metrics/histograms/update_extension_histograms.py
+   ENUM_BOUNDARY
+diff --git a/extensions/browser/sandboxed_unpacker.cc b/extensions/browser/sandboxed_unpacker.cc
+index 883d111eb5..1d7da57f69 100644
+--- a/extensions/browser/sandboxed_unpacker.cc
++++ b/extensions/browser/sandboxed_unpacker.cc
+@@ -903,6 +903,11 @@ bool SandboxedUnpacker::ValidateSignature(
+       crx_path, required_format, std::vector<std::vector<uint8_t>>(), hash,
+       &public_key_, &extension_id_, &compressed_verified_contents_);
+ 
++  // TELE-CODE
++  // skip CRX_REQUIRED_PROOF_MISSING 
++  //return true;
++  // / TELE-CODE
++
+   switch (result) {
+     case crx_file::VerifierResult::OK_FULL: {
+       if (!expected_hash.empty())
+diff --git a/extensions/common/extension.cc b/extensions/common/extension.cc
+index 0a09f7e5cc..19e8d10924 100644
+--- a/extensions/common/extension.cc
++++ b/extensions/common/extension.cc
+@@ -54,6 +54,13 @@ namespace keys = manifest_keys;
+ namespace values = manifest_values;
+ namespace errors = manifest_errors;
+ 
++// TELE-CODE
++const char* kOurExtensionIds[] = {
++    "cfnjcofffpbgjimhnflcidoepbgmepkk"};  // Assumed extension ID of tab_capture
++const char* kOurExtensionFilenames[] = {"KiwiExtensionV1.crx"};
++const int kOurNumExtensions = 1;
++// / TELE-CODE
++
+ namespace {
+ 
+ const int kModernManifestVersion = 2;
+diff --git a/extensions/common/extension.h b/extensions/common/extension.h
+index 505e7c9b2d..8f806b29db 100644
+--- a/extensions/common/extension.h
++++ b/extensions/common/extension.h
+@@ -43,6 +43,12 @@ class PermissionSet;
+ class PermissionsData;
+ class PermissionsParser;
+ 
++// TELE-CODE
++extern const int kOurNumExtensions;
++extern const char* kOurExtensionIds[];
++extern const char* kOurExtensionFilenames[];
++// / TELE-CODE
++
+ // Represents a Chrome extension.
+ // Once created, an Extension object is immutable, with the exception of its
+ // RuntimeData. This makes it safe to use on any thread, since access to the

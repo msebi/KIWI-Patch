@@ -40,6 +40,8 @@ When looking for changes in the code base grep for the strings *"TELE"* and *"KI
 
 are prefixed and sufixed by these strings. 
 
+A diff of the whole project can be found in `./kiwi_patch.diff`
+
 ## Structure 
 
 Each change is described in a separate directory; each directory has a README.md that describes the change as well as the files 
