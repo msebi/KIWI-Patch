@@ -1,7 +1,30 @@
 # KIWI-Patch
+
 This repo contains the changes made to the KIWI browser in order to auto install an extension
 
 ## Setup 
+
+Instructions on building kiwi can be found [here](https://github.com/kiwibrowser/src)
+
+Work started from commit:
+
+```
+commit e71f9649c5d609c55029509f8c0af65bf761451a (HEAD, origin/master, origin/HEAD)
+Author: Alexander Timin <altimin@chromium.org>
+Date:   Wed Mar 17 21:51:41 2021 +0000
+
+    Use perfetto::StaticString to plumb static strings in inspector_trace_events
+
+    R=caseq@chromium.org
+    BUG=1137154
+
+    Change-Id: Ib0b865f44517433f9f2e4f8fa9c1008289193148
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromium/src/+/2769878
+    Auto-Submit: Alexander Timin <altimin@chromium.org>
+    Reviewed-by: Andrey Kosyakov <caseq@chromium.org>
+    Commit-Queue: Andrey Kosyakov <caseq@chromium.org>
+    Cr-Commit-Position: refs/heads/master@{#863975}
+```
 
 ## Notes 
 
