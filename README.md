@@ -26,6 +26,16 @@ Date:   Wed Mar 17 21:51:41 2021 +0000
     Cr-Commit-Position: refs/heads/master@{#863975}
 ```
 
+Chromium was built both on windows 10 (for testing purposes) and Ubuntu 20.20. A virtual machine image of Ubuntu 
+
+was created and run in VirtualBox since KIWI can only be built on Linux. Building on windows was needed to speed up 
+
+development. Instructions for building on windows 10 can be found [here](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/windows_build_instructions.md) 
+
+See this [link](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/windows_build_instructions.md#why-is-my-build-slow) for speeding up the build as well 
+
+as this [one](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/windows_build_instructions.md#using-visual-studio-intellisense) for building and debugging using Visual Studio. 
+
 ## Notes 
 
 All file paths are relative to the *source root directory* of chromium. For example,
