@@ -26,6 +26,8 @@ Date:   Wed Mar 17 21:51:41 2021 +0000
     Cr-Commit-Position: refs/heads/master@{#863975}
 ```
 
+## Build (win 10, Ubuntu 20.20)
+
 Chromium was built both on windows 10 (for testing purposes) and Ubuntu 20.20. A virtual machine image of Ubuntu 
 
 was created and run in VirtualBox since KIWI can only be built on Linux. Building on windows was needed to speed up 
@@ -35,6 +37,12 @@ development. Instructions for building on windows 10 can be found [here](https:/
 See this [link](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/windows_build_instructions.md#why-is-my-build-slow) for speeding up the build as well 
 
 as this [one](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/windows_build_instructions.md#using-visual-studio-intellisense) for building and debugging using Visual Studio. 
+
+For building on ubuntu, follow the steps [here](https://github.com/kiwibrowser/src#building).
+
+Development was done in parallel (both on Win 10 and Ubuntu); it was more convenient to debug and test on windows 10 and then port the respective changes to Ubuntu.
+
+Building in Ubuntu takes longer because of the extra layer added by the vm. 
 
 ## Notes 
 
